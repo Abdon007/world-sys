@@ -1,0 +1,11 @@
+#%RAML 1.0 Trait
+usage: Adiciona validação de client_id e client_secret
+headers:
+  client_id:
+    type: string
+    required: true
+    description: Client ID fornecido pelo API Manager
+  client_secret:
+    type: string
+    required: true
+    description: Client Secret fornecido pelo API Manager
