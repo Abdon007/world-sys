@@ -1,0 +1,18 @@
+#%RAML 1.0 Trait
+usage: Adiciona respostas de erro padrão
+responses:
+  400:
+    description: Requisição malformada
+    body:
+      application/json:
+        example: !include ../examples/error-response.raml
+  404:
+    description: Recurso não encontrado
+    body:
+      application/json:
+        example: !include ../examples/error-response.raml
+  500:
+    description: Erro interno do servidor
+    body:
+      application/json:
+        example: !include ../examples/error-response.raml

@@ -1,0 +1,322 @@
+#%RAML 1.0
+title: Word System API
+version: v1
+baseUri: http://api.evermind.com/word-sys/{version}
+mediaType: application/json
+protocols: [ HTTPS ]
+
+documentation:
+  - title: Introdução
+    content: |
+      A **World System API** fornece acesso a dados geográficos e linguísticos baseados no banco de dados `world` do MySQL.  
+      É possível consultar, cadastrar, atualizar e excluir informações de países, cidades e idiomas.
+
+  - title: Autenticação
+    content: |
+      Esta API utiliza o mecanismo de **Client ID Enforcement** para autenticação.  
+      Cada requisição deve conter os headers `client_id` e `client_secret`, fornecidos no momento do registro da aplicação no API Manager.
+
+      **Exemplo:**
+      ```
+      client_id: seu-client-id
+      client_secret: seu-client-secret
+      ```
+
+  - title: Formato das Respostas
+    content: |
+      Todas as respostas são no formato `application/json`.  
+      Em caso de erro, a resposta segue o seguinte padrão:
+
+      ```json
+      {
+        "error": "Recurso não encontrado",
+        "code": 404
+      }
+      ```
+
+  - title: Padrões de Paginação
+    content: |
+      Para endpoints que retornam listas (como `/countries` ou `/languages`), é possível usar os parâmetros `limit` e `offset`.
+
+      **Exemplo:**
+      ```
+      GET /countries?limit=10&offset=20
+      ```
+
+  - title: Recursos Disponíveis
+    content: |
+      - `/countries` – gerenciamento de países
+      - `/cities` – gerenciamento de cidades
+      - `/languages` – gerenciamento de idiomas por país
+
+  - title: Como testar a API
+    content: |
+      Você pode testar os endpoints da API utilizando ferramentas como **Postman**, **Insomnia** ou o **API Console** disponível na Anypoint Platform.
+
+      ### Headers obrigatórios:
+      ```
+      client_id: seu-client-id
+      client_secret: seu-client-secret
+      Content-Type: application/json
+      ```
+
+      ### Exemplos de Requisição:
+
+      **GET /countries**
+      ```
+      GET https://api.evermind.com/world-sys/v1/countries?limit=10&offset=0
+      ```
+
+      **POST /cities**
+      ```json
+      {
+        "name": "São Paulo",
+        "countryCode": "BRA",
+        "district": "São Paulo",
+        "population": 12300000
+      }
+      ```
+
+  - title: Boas práticas de uso
+    content: |
+      - Utilize a **paginação** (`limit` e `offset`) para evitar sobrecarga no retorno de dados.
+      - Sempre envie os **headers de autenticação** (`client_id` e `client_secret`) nas requisições.
+      - Trate corretamente os códigos de resposta:
+        - `200` – Requisição bem-sucedida
+        - `201` – Recurso criado com sucesso
+        - `400` – Erro na requisição (validação, parâmetros)
+        - `404` – Recurso não encontrado
+        - `500` – Erro interno no servidor
+      - Use os métodos HTTP adequados:
+        - `GET` para buscar dados
+        - `POST` para criar
+        - `PUT` para atualizar
+        - `DELETE` para remover
+
+      Para dúvidas ou suporte, entre em contato com a equipe responsável pela API.
+
+
+traits:
+  client-id-required: !include traits/client-id-required.raml
+  errorResponses: !include traits/errorResponses.raml
+
+types:
+  Country: !include dataTypes/CountryType.raml
+  City: !include dataTypes/CityType.raml
+  CountryLanguage: !include dataTypes/CountryLanguageType.raml
+
+/countries:
+  get:
+    description: Retorna todos os países
+    is: [errorResponses, client-id-required]
+    queryParameters:
+      name:
+        type: string
+        description: Filtra países pelo nome (case-insensitive)
+      continent:
+        type: string
+        description: Filtra países pelo continente
+      limit:
+        type: integer
+        default: 10
+        maximum: 100
+        description: Número máximo de itens por página
+      offset:
+        type: integer
+        default: 0
+        description: Número de itens a pular antes de começar a listar
+    responses:
+      200:
+        body:
+          application/json:
+            type: Country[]
+            example: !include examples/country-array-example.raml
+  post:
+    description: Cria um novo país
+    is: [errorResponses, client-id-required]
+    body:
+      application/json:
+        type: Country
+        example: !include examples/country-example.raml
+    responses:
+      201:
+        body:
+          application/json:
+            type: Country
+
+  /{countryCode}:
+    uriParameters:
+      countryCode:
+        type: string
+        required: true
+    get:
+      description: Retorna um país pelo código
+      is: [errorResponses, client-id-required]
+      responses:
+        200:
+          body:
+            application/json:
+              type: Country
+              example: !include examples/country-example.raml
+    put:
+      description: Atualiza um país existente
+      is: [errorResponses, client-id-required]
+      body:
+        application/json:
+          type: Country
+          example: !include examples/country-example.raml
+      responses:
+        200:
+          body:
+            application/json:
+              type: Country
+    delete:
+      description: Remove um país
+      is: [errorResponses, client-id-required]
+      responses:
+        204:
+          description: País removido com sucesso
+
+/cities:
+  get:
+    description: Retorna todas as cidades
+    is: [errorResponses, client-id-required]
+    queryParameters:
+      countryCode:
+        type: string
+        description: Filtra cidades por código do país
+      district:
+        type: string
+        description: Filtra por distrito
+      limit:
+        type: integer
+        default: 10
+      offset:
+        type: integer
+        default: 0
+    responses:
+      200:
+        body:
+          application/json:
+            type: City[]
+            example: !include examples/city-array-example.raml
+  post:
+    description: Cria uma nova cidade
+    is: [errorResponses, client-id-required]
+    body:
+      application/json:
+        type: City
+        example: !include examples/city-example.raml
+    responses:
+      201:
+        body:
+          application/json:
+            type: City
+
+  /{cityId}:
+    uriParameters:
+      cityId:
+        type: integer
+        required: true
+    get:
+      description: Retorna uma cidade pelo ID
+      is: [errorResponses, client-id-required]
+      responses:
+        200:
+          body:
+            application/json:
+              type: City
+              example: !include examples/city-example.raml
+    put:
+      description: Atualiza uma cidade existente
+      is: [errorResponses, client-id-required]
+      body:
+        application/json:
+          type: City
+          example: !include examples/city-example.raml
+      responses:
+        200:
+          body:
+            application/json:
+              type: City
+    delete:
+      description: Remove uma cidade
+      is: [errorResponses, client-id-required]
+      responses:
+        204:
+          description: Cidade removida com sucesso
+
+/languages:
+  get:
+    description: Retorna todos os idiomas oficiais por país
+    is: [errorResponses, client-id-required]
+    queryParameters:
+      countryCode:
+        type: string
+        description: Filtra idiomas por código do país
+      language:
+        type: string
+        description: Filtra por nome do idioma
+      isOfficial:
+        type: boolean
+        description: Define se deve retornar apenas idiomas oficiais (`true` ou `false`)
+      limit:
+        type: integer
+        default: 10
+        maximum: 100
+        description: Número máximo de itens por página
+      offset:
+        type: integer
+        default: 0
+        description: Número de itens a pular antes de começar a listar
+    responses:
+      200:
+        body:
+          application/json:
+            type: CountryLanguage[]
+            example: !include examples/countrylanguage-array-example.raml
+  post:
+    description: Cria um novo idioma oficial para um país
+    is: [errorResponses, client-id-required]
+    body:
+      application/json:
+        type: CountryLanguage
+        example: !include examples/countrylanguage-example.raml
+    responses:
+      201:
+        body:
+          application/json:
+            type: CountryLanguage
+
+  /{languageId}:
+    uriParameters:
+      languageId:
+        type: string
+        required: true
+    get:
+      description: Retorna um idioma por identificador
+      is: [errorResponses, client-id-required]
+      responses:
+        200:
+          body:
+            application/json:
+              type: CountryLanguage
+              example: !include examples/countrylanguage-example.raml
+    put:
+      description: Atualiza um idioma existente
+      is: [errorResponses, client-id-required]
+      body:
+        application/json:
+          type: CountryLanguage
+          example: !include examples/countrylanguage-example.raml
+      responses:
+        200:
+          body:
+            application/json:
+              type: CountryLanguage
+    delete:
+      description: Remove um idioma oficial de um país
+      is: [errorResponses, client-id-required]
+      responses:
+        204:
+          description: Idioma removido com sucesso
